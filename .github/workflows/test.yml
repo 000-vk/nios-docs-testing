@@ -38,7 +38,7 @@ jobs:
                     },
                     {
                       "name": "Event",
-                      "value": "**${{ github.event_name }}**",  # Removed | capitalize
+                      "value": "**${{ github.event_name }}**",
                       "inline": true
                     },
                     {
@@ -46,36 +46,11 @@ jobs:
                       "value": "**${{ github.event.action || 'Triggered' }}**",
                       "inline": true
                     },
-                    ${{ github.event_name == 'push' && format('
-                    {
-                      "name": "Commit Details",
-                      "value": "**Message:** {0}\n**Author:** {1}\n[View Commit]({2})",
-                      "inline": false
-                    }', github.event.head_commit.message, github.event.pusher.name, github.event.head_commit.url) || '' }},
-                    ${{ github.event_name == 'pull_request' && format('
-                    {
-                      "name": "Pull Request Details",
-                      "value": "**Title:** {0}\n**Author:** {1}\n[View PR]({2})\n**State:** {3}",
-                      "inline": false
-                    }', github.event.pull_request.title, github.event.pull_request.user.login, github.event.pull_request.html_url, github.event.pull_request.state) || '' }},
-                    ${{ github.event_name == 'issues' && format('
-                    {
-                      "name": "Issue Details",
-                      "value": "**Title:** {0}\n**Author:** {1}\n[View Issue]({2})\n**State:** {3}",
-                      "inline": false
-                    }', github.event.issue.title, github.event.issue.user.login, github.event.issue.html_url, github.event.action) || '' }},
-                    ${{ github.event_name == 'issue_comment' && format('
-                    {
-                      "name": "Comment Details",
-                      "value": "**Issue #:** {0}\n**Author:** {1}\n[View Comment]({2})\n**Comment:** {3}",
-                      "inline": false
-                    }', github.event.issue.number, github.event.comment.user.login, github.event.comment.html_url, github.event.comment.body) || '' }},
-                    ${{ github.event_name == 'release' && format('
-                    {
-                      "name": "Release Details",
-                      "value": "**Name:** {0}\n**Tag:** {1}\n[View Release]({2})",
-                      "inline": false
-                    }', github.event.release.name, github.event.release.tag_name, github.event.release.html_url) || '' }},
+                    ${{ github.event_name == 'push' && format('{"name": "Commit Details", "value": "**Message:** {0}\\n**Author:** {1}\\n[View Commit]({2})", "inline": false}', github.event.head_commit.message, github.event.pusher.name, github.event.head_commit.url) || 'null' }},
+                    ${{ github.event_name == 'pull_request' && format('{"name": "Pull Request Details", "value": "**Title:** {0}\\n**Author:** {1}\\n[View PR]({2})\\n**State:** {3}", "inline": false}', github.event.pull_request.title, github.event.pull_request.user.login, github.event.pull_request.html_url, github.event.pull_request.state) || 'null' }},
+                    ${{ github.event_name == 'issues' && format('{"name": "Issue Details", "value": "**Title:** {0}\\n**Author:** {1}\\n[View Issue]({2})\\n**State:** {3}", "inline": false}', github.event.issue.title, github.event.issue.user.login, github.event.issue.html_url, github.event.action) || 'null' }},
+                    ${{ github.event_name == 'issue_comment' && format('{"name": "Comment Details", "value": "**Issue #:** {0}\\n**Author:** {1}\\n[View Comment]({2})\\n**Comment:** {3}", "inline": false}', github.event.issue.number, github.event.comment.user.login, github.event.comment.html_url, github.event.comment.body) || 'null' }},
+                    ${{ github.event_name == 'release' && format('{"name": "Release Details", "value": "**Name:** {0}\\n**Tag:** {1}\\n[View Release]({2})", "inline": false}', github.event.release.name, github.event.release.tag_name, github.event.release.html_url) || 'null' }},
                     {
                       "name": "Timestamp",
                       "value": "**${{ github.event_name == 'push' && github.event.head_commit.timestamp || github.event_name == 'pull_request' && github.event.pull_request.created_at || github.event_name == 'issues' && github.event.issue.created_at || github.event_name == 'issue_comment' && github.event.comment.created_at || github.event_name == 'release' && github.event.release.created_at || 'N/A' }} IST**",
