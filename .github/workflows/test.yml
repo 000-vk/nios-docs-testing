@@ -1,156 +1,38 @@
 name: Discord Notifications
 
-# trigger on common repo events (you can add more events here if needed)
+
+
 on:
   push:
+    branches:
+      - contents      # Adjust to your default branch (e.g., 'master')
   pull_request:
+    types: [opened, reopened, closed, edited]
+    branches:
+      - contents
   issues:
+    types: [opened, edited, closed]
   issue_comment:
+    types: [created, edited, deleted]
   release:
-  workflow_dispatch:
-  pull_request_review:
-  create:
-  delete:
-  fork:
-  repository_dispatch:
+    types: [published]
 
 jobs:
-  notify:
+  notify-discord:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Discord notification
+      - name: Send Discord Notification
+        uses: Ilshidur/action-discord@master
         env:
-          # recommended: store webhook in repo secrets (Settings -> Secrets -> Actions)
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          # If you insist on putting webhook directly in the file (NOT recommended), replace the line above with:
-          # WEBHOOK_URL: "https://discord.com/api/webhooks/XXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXX"
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-        run: |
-          python3 - <<'PY'
-          import os, json, sys, urllib.request as ur, urllib.error as ue
-
-          event_name = os.environ.get('GITHUB_EVENT_NAME')
-          repo = os.environ.get('GITHUB_REPOSITORY')
-          actor = os.environ.get('GITHUB_ACTOR')
-          ref = os.environ.get('GITHUB_REF') or ""
-          sha = os.environ.get('GITHUB_SHA') or ""
-          event_path = os.environ.get('GITHUB_EVENT_PATH')
-
-          # load raw GitHub event payload
-          try:
-              with open(event_path, 'r') as f:
-                  event = json.load(f)
-          except Exception:
-              event = {}
-
-          # Build a readable description depending on event type
-          desc_lines = []
-          desc_lines.append(f"**Event:** {event_name}")
-          desc_lines.append(f"**Repository:** {repo}")
-          desc_lines.append(f"**Actor:** {actor}")
-
-          url = f"https://github.com/{repo}"
-
-          if event_name == 'push':
-              pusher = event.get('pusher', {}).get('name') or actor
-              branch = ref.replace('refs/heads/', '')
-              commits = event.get('commits', [])
-              commit_msgs = []
-              for c in commits[:5]:
-                  msg = (c.get('message') or '').splitlines()[0]
-                  cid = (c.get('id') or '')[:7]
-                  commit_msgs.append(f"- {msg} (`{cid}`)")
-              if not commit_msgs:
-                  commit_msgs_text = "(no commits payload)"
-              else:
-                  commit_msgs_text = "\n".join(commit_msgs)
-              desc_lines.append(f"**Pusher:** {pusher}")
-              desc_lines.append(f"**Branch:** {branch}")
-              desc_lines.append("**Commits:**")
-              desc_lines.append(commit_msgs_text)
-              url = event.get('compare') or url
-
-          elif event_name.startswith('pull_request'):
-              pr = event.get('pull_request', {}) or {}
-              number = pr.get('number')
-              title = pr.get('title') or ""
-              pr_user = pr.get('user', {}).get('login') or ""
-              action = event.get('action') or ""
-              pr_body = (pr.get('body') or "").splitlines()[0] if pr.get('body') else ""
-              desc_lines.append(f"**PR #{number}:** {title}")
-              desc_lines.append(f"**Author:** {pr_user}")
-              desc_lines.append(f"**Action:** {action}")
-              if pr_body:
-                  desc_lines.append(f"**Body:** {pr_body}")
-              url = pr.get('html_url') or url
-
-          elif event_name in ('issues', 'issue_comment'):
-              issue = event.get('issue', {}) or {}
-              number = issue.get('number')
-              title = issue.get('title') or ""
-              user = issue.get('user', {}).get('login') or ""
-              action = event.get('action') or ""
-              desc_lines.append(f"**Issue #{number}:** {title}")
-              desc_lines.append(f"**User:** {user}")
-              desc_lines.append(f"**Action:** {action}")
-              if event_name == 'issue_comment':
-                  comment = event.get('comment', {}).get('body', '').splitlines()[0]
-                  if comment:
-                      desc_lines.append(f"**Comment:** {comment}")
-              url = issue.get('html_url') or url
-
-          elif event_name == 'release':
-              rel = event.get('release', {}) or {}
-              tag = rel.get('tag_name') or ""
-              name = rel.get('name') or ""
-              body = (rel.get('body') or "").splitlines()[0] if rel.get('body') else ""
-              action = event.get('action') or ""
-              desc_lines.append(f"**Release:** {name} ({tag})")
-              desc_lines.append(f"**Action:** {action}")
-              if body:
-                  desc_lines.append(f"**Notes:** {body}")
-              url = rel.get('html_url') or url
-
-          else:
-              # Generic fallback: include top-level action if present
-              if 'action' in event:
-                  desc_lines.append(f"**Action:** {event.get('action')}")
-
-          description = "\n".join(desc_lines)
-
-          # Create Discord embed payload
-          embed = {
-              "title": f"GitHub • {repo} — {event_name}",
-              "description": description,
-              "url": url,
-              "fields": [
-                  {"name": "Ref", "value": (ref or "N/A"), "inline": True},
-                  {"name": "SHA", "value": (sha[:7] if sha else "N/A"), "inline": True},
-              ]
-          }
-
-          payload = {"embeds": [embed]}
-
-          webhook = os.environ.get('DISCORD_WEBHOOK_URL')
-          if not webhook:
-              print("ERROR: DISCORD_WEBHOOK_URL not set. Put your webhook in the DISCORD_WEBHOOK secret.", file=sys.stderr)
-              sys.exit(1)
-
-          data = json.dumps(payload).encode('utf-8')
-          req = ur.Request(webhook, data=data, headers={'Content-Type': 'application/json'})
-
-          try:
-              with ur.urlopen(req, timeout=15) as resp:
-                  print("Discord webhook response:", resp.status, resp.reason)
-          except ue.HTTPError as e:
-              print("HTTP error sending webhook:", e.code, e.read().decode('utf-8'), file=sys.stderr)
-              sys.exit(1)
-          except Exception as e:
-              print("Failed to send webhook:", str(e), file=sys.stderr)
-              sys.exit(1)
-          PY
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            **Event: ${{ github.event_name }}** 🚀
+            **Action: ${{ github.event.action || 'triggered' }}**
+            **Repository**: ${{ github.repository }}
+            ${{ github.event_name == 'push' && format('**Commit Message**: {0}\n**Author**: {1}\n**URL**: {2}', github.event.head_commit.message, github.event.pusher.name, github.event.head_commit.url) || '' }}
+            ${{ github.event_name == 'pull_request' && format('**PR Title**: {0}\n**Author**: {1}\n**URL**: {2}\n**State**: {3}', github.event.pull_request.title, github.event.pull_request.user.login, github.event.pull_request.html_url, github.event.pull_request.state) || '' }}
+            ${{ github.event_name == 'issues' && format('**Issue Title**: {0}\n**Author**: {1}\n**URL**: {2}\n**State**: {3}', github.event.issue.title, github.event.issue.user.login, github.event.issue.html_url, github.event.action) || '' }}
+            ${{ github.event_name == 'issue_comment' && format('**Comment on Issue**: #{0}\n**Author**: {1}\n**URL**: {2}\n**Comment**: {3}', github.event.issue.number, github.event.comment.user.login, github.event.comment.html_url, github.event.comment.body) || '' }}
+            ${{ github.event_name == 'release' && format('**Release**: {0}\n**Tag**: {1}\n**URL**: {2}', github.event.release.name, github.event.release.tag_name, github.event.release.html_url) || '' }}
+            **Timestamp**: ${{ github.event_name == 'push' && github.event.head_commit.timestamp || github.event_name == 'pull_request' && github.event.pull_request.created_at || github.event_name == 'issues' && github.event.issue.created_at || github.event_name == 'issue_comment' && github.event.comment.created_at || github.event_name == 'release' && github.event.release.created_at || '' }}
