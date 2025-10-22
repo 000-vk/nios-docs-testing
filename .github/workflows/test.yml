@@ -20,38 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord Notification
-        uses: Ilshidur/action-discord@master
+        uses: Ilshidur/action-discord@0.4.0
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}  # Pass webhook via environment variable
         with:
           args: |
-            {
-              "embeds": [{
-                "title": "${{ github.event_name }} Event",
-                "color": 5814783,
-                "fields": [
-                  {
-                    "name": "Action",
-                    "value": "${{ github.event.action || 'triggered' }}",
-                    "inline": true
-                  },
-                  {
-                    "name": "Repository",
-                    "value": "${{ github.repository }}",
-                    "inline": true
-                  }
-                  ${{ github.event_name == 'push' && format(',{{\"name\": \"Commit Message\", \"value\": \"{0}\", \"inline\": false}}, {{\"name\": \"Author\", \"value\": \"{1}\", \"inline\": true}}, {{\"name\": \"URL\", \"value\": \"{2}\", \"inline\": false}}', github.event.head_commit.message, github.event.pusher.name, github.event.head_commit.url) || '' }}
-                  ${{ github.event_name == 'pull_request' && format(',{{\"name\": \"PR Title\", \"value\": \"{0}\", \"inline\": false}}, {{\"name\": \"Author\", \"value\": \"{1}\", \"inline\": true}}, {{\"name\": \"URL\", \"value\": \"{2}\", \"inline\": false}}, {{\"name\": \"State\", \"value\": \"{3}\", \"inline\": true}}', github.event.pull_request.title, github.event.pull_request.user.login, github.event.pull_request.html_url, github.event.pull_request.state) || '' }}
-                  ${{ github.event_name == 'issues' && format(',{{\"name\": \"Issue Title\", \"value\": \"{0}\", \"inline\": false}}, {{\"name\": \"Author\", \"value\": \"{1}\", \"inline\": true}}, {{\"name\": \"URL\", \"value\": \"{2}\", \"inline\": false}}, {{\"name\": \"State\", \"value\": \"{3}\", \"inline\": true}}', github.event.issue.title, github.event.issue.user.login, github.event.issue.html_url, github.event.action) || '' }}
-                  ${{ github.event_name == 'issue_comment' && format(',{{\"name\": \"Comment on Issue\", \"value\": \"#{0}\", \"inline\": false}}, {{\"name\": \"Author\", \"value\": \"{1}\", \"inline\": true}}, {{\"name\": \"URL\", \"value\": \"{2}\", \"inline\": false}}, {{\"name\": \"Comment\", \"value\": \"{3}\", \"inline\": false}}', github.event.issue.number, github.event.comment.user.login, github.event.comment.html_url, github.event.comment.body) || '' }}
-                  ${{ github.event_name == 'release' && format(',{{\"name\": \"Release\", \"value\": \"{0}\", \"inline\": false}}, {{\"name\": \"Tag\", \"value\": \"{1}\", \"inline\": true}}, {{\"name\": \"URL\", \"value\": \"{2}\", \"inline\": false}}', github.event.release.name, github.event.release.tag_name, github.event.release.html_url) || '' }}
-                  ,
-                  {
-                    "name": "Timestamp",
-                    "value": "${{ github.event_name == 'push' && github.event.head_commit.timestamp || github.event_name == 'pull_request' && github.event.pull_request.created_at || github.event_name == 'issues' && github.event.issue.created_at || github.event_name == 'issue_comment' && github.event.comment.created_at || github.event_name == 'release' && github.event.release.created_at || 'N/A' }}",
-                    "inline": false
-                  }
-                ],
-                "timestamp": "${{ github.event_name == 'push' && github.event.head_commit.timestamp || github.event_name == 'pull_request' && github.event.pull_request.created_at || github.event_name == 'issues' && github.event.issue.created_at || github.event_name == 'issue_comment' && github.event.comment.created_at || github.event_name == 'release' && github.event.release.created_at || '' }}"
-              }]
-            }
+            **Commit:** `${{ github.sha }}`
+            **Commit message:** ${{ github.event.head_commit.message }}
+            **Branch:** ${{ github.ref }}
+            **Author:** ${{ github.event.head_commit.author.email }}
+            **Repository:** ${{ github.repository }}
+            **Event:** ${{ github.event_name }}
