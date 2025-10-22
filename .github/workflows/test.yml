@@ -25,6 +25,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}  # Pass webhook via environment variable
         with:
           args: |
+            <@&1116740147275382874> 
             **Repository Notification**
             **repo name:** ${{ github.repository }}
             **Commit:** `${{ github.sha }}`
