@@ -21,7 +21,7 @@ jobs:
       - name: Send Discord notification
         env:
           # recommended: store webhook in repo secrets (Settings -> Secrets -> Actions)
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           # If you insist on putting webhook directly in the file (NOT recommended), replace the line above with:
           # WEBHOOK_URL: "https://discord.com/api/webhooks/XXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXX"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
