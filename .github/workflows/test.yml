@@ -20,7 +20,6 @@ jobs:
     name: Notify Discord
     runs-on: ubuntu-latest
 
-    # Put common env here so they are available to the step
     env:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       EVENT_NAME: ${{ github.event_name }}
@@ -47,26 +46,24 @@ jobs:
       RELEASE_URL: ${{ github.event.release.html_url }}
 
     steps:
-      - name: Checkout repo (so actions/checkout events are handled consistently)
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Build payload and send to Discord
+      - name: Build payload and send to Discord (safe JSON encoding)
         shell: bash
         run: |
-          # Fail early if webhook isn't set
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
             echo "DISCORD_WEBHOOK_URL secret is not set. Skipping notification."
             exit 0
           fi
 
-          # Start building a multi-line content string (human readable)
+          # Build a readable message using newlines and markdown
           content="**Event:** ${EVENT_NAME}"
           if [ -n "${ACTION}" ]; then
             content="${content} — ${ACTION}"
           fi
           content="${content}\n**Repository:** ${REPO}"
 
-          # Add push/commit info if present
           if [ -n "${HEAD_COMMIT_MESSAGE}" ]; then
             content="${content}\n\n**Commit:** ${HEAD_COMMIT_MESSAGE}"
             if [ -n "${HEAD_COMMIT_AUTHOR}" ]; then
@@ -77,7 +74,6 @@ jobs:
             fi
           fi
 
-          # Add PR info if present
           if [ -n "${PR_TITLE}" ]; then
             content="${content}\n\n**Pull Request:** ${PR_TITLE}"
             if [ -n "${PR_AUTHOR}" ]; then content="${content}\n**PR author:** ${PR_AUTHOR}"; fi
@@ -85,7 +81,6 @@ jobs:
             if [ -n "${PR_STATE}" ]; then content="${content}\n**State:** ${PR_STATE}"; fi
           fi
 
-          # Add issue info if present
           if [ -n "${ISSUE_TITLE}" ]; then
             content="${content}\n\n**Issue #${ISSUE_NUMBER}:** ${ISSUE_TITLE}"
             if [ -n "${ISSUE_AUTHOR}" ]; then content="${content}\n**Issue author:** ${ISSUE_AUTHOR}"; fi
@@ -93,9 +88,7 @@ jobs:
             if [ -n "${ISSUE_ACTION}" ]; then content="${content}\n**Action:** ${ISSUE_ACTION}"; fi
           fi
 
-          # Add comment info if present
           if [ -n "${COMMENT_BODY}" ]; then
-            # Shorten comment body if very long
             short_comment="${COMMENT_BODY}"
             if [ ${#short_comment} -gt 650 ]; then
               short_comment="${short_comment:0:650}…"
@@ -104,24 +97,22 @@ jobs:
             if [ -n "${COMMENT_URL}" ]; then content="${content}\n${COMMENT_URL}"; fi
           fi
 
-          # Add release info if present
           if [ -n "${RELEASE_NAME}" ] || [ -n "${RELEASE_TAG}" ]; then
             content="${content}\n\n**Release:** ${RELEASE_NAME} ${RELEASE_TAG}"
             if [ -n "${RELEASE_URL}" ]; then content="${content}\n${RELEASE_URL}"; fi
           fi
 
-          # Fall back to default timestamp if needed
           if [ -n "${DEFAULT_TIMESTAMP}" ]; then
             content="${content}\n\n_Timestamp: ${DEFAULT_TIMESTAMP}_"
           fi
 
-          # Escape quotes and newlines for JSON payload
-          safe=$(printf "%s" "$content" | sed 's/\\/\\\\/g; s/"/\\"/g; :a;N;$!ba;s/\n/\\n/g')
+          # Use Python to safely encode JSON (avoids double-escaping issues)
+          payload=$(printf "%s" "$content" | python -c 'import sys,json; text=sys.stdin.read(); print(json.dumps({"content": text}))')
 
-          payload="{\"content\":\"${safe}\"}"
+          echo "Payload to send:"
+          echo "$payload"
 
           # Send to Discord
-          echo "Sending notification to Discord..."
           curl -s -X POST -H "Content-Type: application/json" --data "$payload" "$DISCORD_WEBHOOK_URL" \
-            || echo "Failed to send notification (curl exit code $?). Payload was: $payload"
+            || echo "Failed to send notification (curl exit code $?)."
 
