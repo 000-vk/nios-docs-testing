@@ -1,10 +1,11 @@
-name: Notify Discord on PR to Main
+
+name: Notify Discord on Push to Main
+
 
 on:
-  pull_request:
-    types: [opened]
+  push:
     branches:
-      - contents
+      -contents
 
 jobs:
   notify-discord:
@@ -13,11 +14,11 @@ jobs:
       - name: Send message to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          PR_USER: ${{ github.event.pull_request.user.login }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"A new PR was opened on main by $PR_USER: [$PR_TITLE]($PR_URL)\"}" \
+            -d "{\"content\": \"A push was made to main by $GITHUB_ACTOR: [$COMMIT_MSG]($COMMIT_URL)\"}" \
             $DISCORD_WEBHOOK
